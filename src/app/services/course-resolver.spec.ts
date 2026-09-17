@@ -1,10 +1,15 @@
-import { describe, vi, beforeEach } from "vitest";
+import { CoursePage } from "../course-page/course-page";
+import { courseResolver } from './course.resolver'
+import { describe, it, vi, beforeEach, expect } from "vitest";
+import { MOCK_COURSES } from "../testing/testing-data";
 import { CoursesService } from "./courses.service";
 import { TestBed } from "@angular/core/testing";
-import { CoursePage } from "../course-page/course-page";
+import { RouterTestingHarness } from '@angular/router/testing';
+import { provideRouter, Router } from "@angular/router";
 
 describe ('CourseResolver', () => {
     let mockCoursesService: any;
+    let harness: RouterTestingHarness;
 
     beforeEach(async () => {
         mockCoursesService = {
@@ -15,9 +20,31 @@ describe ('CourseResolver', () => {
         imports: [CoursePage],
         providers: [
             {provide: CoursesService, useValue: mockCoursesService},
-        ]
-    })
+            provideRouter([ {
+            path: 'courses/:id',
+            component: CoursePage,
+            resolve: {
+            course: courseResolver
+            }
+        }])
+    ]
+}).compileComponents();
 
+    harness = await RouterTestingHarness.create();
+})
+
+it("should load correct course by ID", async () =>{
+    mockCoursesService.findCourseById.mockResolvedValueOnce(MOCK_COURSES[0])
+    const component = await harness.navigateByUrl('/courses/1', CoursePage);
+
+    ///ESPERO QUE SEJA INJETADA NA ROTA A URL CORRETA
+    expect(TestBed.inject(Router).url).toBe('/courses/1');
+
+    ///ESPERO QUE TENHA UMA CHAMADA EM "FindCourseByID" PARA O "ID" 1
+    expect(mockCoursesService.findCourseById).toHaveBeenCalledOnce();
+    expect(mockCoursesService.findCourseById).toHaveBeenCalledWith("1");
+
+    expect(harness.routeNativeElement?.textContent).toContain("Beginner Course");
 })
 
 })
